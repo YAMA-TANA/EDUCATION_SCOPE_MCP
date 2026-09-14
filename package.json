@@ -17,6 +17,7 @@
     "start:http": "node dist/src/http.js",
     "dev": "tsx src/index.ts",
     "dev:http": "tsx src/http.ts",
+    "import:mext": "node scripts/import-mext.mjs",
     "test": "npm run build && node --test dist/tests/*.test.js"
   },
   "dependencies": {
