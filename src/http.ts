@@ -26,7 +26,7 @@ const httpServer = createServer((req, res) => {
       JSON.stringify({
         ok: true,
         service: "education-scope-mcp",
-        version: "0.1.0",
+        version: "0.2.0",
         mcp: "/mcp",
       }),
     );
@@ -45,7 +45,7 @@ const httpServer = createServer((req, res) => {
 
 httpServer.listen(port, host, () => {
   console.error(
-    `education-scope-mcp 0.1.0 listening on http://${host}:${port}/mcp`,
+    `education-scope-mcp 0.2.0 listening on http://${host}:${port}/mcp`,
   );
 });
 
