@@ -14,10 +14,13 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "start": "node dist/src/index.js",
+    "start:http": "node dist/src/http.js",
     "dev": "tsx src/index.ts",
+    "dev:http": "tsx src/http.ts",
     "test": "npm run build && node --test dist/tests/*.test.js"
   },
   "dependencies": {
+    "@modelcontextprotocol/node": "^2.0.0",
     "@modelcontextprotocol/server": "^2.0.0",
     "zod": "^4.0.0"
   },
