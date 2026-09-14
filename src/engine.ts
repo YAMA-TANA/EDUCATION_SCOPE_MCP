@@ -1,4 +1,4 @@
-import { curriculumById, curriculumItems } from "./data.js";
+import { curriculumById, curriculumItems, datasetStatus } from "./store.js";
 import type {
   CurriculumItem,
   SchoolStage,
@@ -40,6 +40,7 @@ export function scopeRank(item: CurriculumItem): number {
 }
 
 function termsFor(item: CurriculumItem): string[] {
+  if (item.searchable === false) return [];
   return [item.topic, ...item.aliases];
 }
 
@@ -81,6 +82,15 @@ function scoreItem(query: string, item: CurriculumItem): ScoredCurriculumItem {
   return { item, score, matchedBy };
 }
 
+function compareScored(a: ScoredCurriculumItem, b: ScoredCurriculumItem): number {
+  return (
+    b.score - a.score ||
+    scopeRank(a.item) - scopeRank(b.item) ||
+    (a.item.dataOrigin === "mext" ? -1 : 1) -
+      (b.item.dataOrigin === "mext" ? -1 : 1)
+  );
+}
+
 export function classifyKnowledgeScope(
   query: string,
   limit = 5,
@@ -88,7 +98,7 @@ export function classifyKnowledgeScope(
   const ranked = curriculumItems
     .map((item) => scoreItem(query, item))
     .filter((entry) => entry.score > 0)
-    .sort((a, b) => b.score - a.score || scopeRank(a.item) - scopeRank(b.item));
+    .sort(compareScored);
 
   if (ranked.length === 0) {
     return {
@@ -96,7 +106,10 @@ export function classifyKnowledgeScope(
       bestMatch: null,
       confidence: 0,
       alternatives: [],
-      note: "seedデータでは判定できません。未登録を『範囲内』とはみなしません。",
+      note:
+        datasetStatus.mode === "mext+seed"
+          ? "文科省コード表の正規化データでも判定できませんでした。未登録・曖昧な概念を『範囲内』とはみなしません。"
+          : "seedデータでは判定できません。npm run import:mext で文科省コード表を全量取り込みできます。",
     };
   }
 
@@ -138,11 +151,15 @@ export function searchCurriculum(options: SearchOptions): CurriculumItem[] {
     items = items
       .map((item) => scoreItem(query, item))
       .filter((entry) => entry.score > 0)
-      .sort((a, b) => b.score - a.score)
+      .sort(compareScored)
       .map((entry) => entry.item);
   }
 
   return items.slice(0, Math.max(1, Math.min(options.limit ?? 20, 100)));
+}
+
+function semanticKey(item: CurriculumItem): string {
+  return `${item.stage}|${item.grade ?? "*"}|${normalize(item.subject)}|${normalize(item.topic)}`;
 }
 
 function detectCurriculumItems(text: string): CurriculumItem[] {
@@ -154,7 +171,8 @@ function detectCurriculumItems(text: string): CurriculumItem[] {
       if (!meaningfulTerm(rawTerm)) continue;
       const term = normalize(rawTerm);
       if (normalizedText.includes(term)) {
-        found.set(item.id, item);
+        const key = semanticKey(item);
+        if (!found.has(key)) found.set(key, item);
         break;
       }
     }
@@ -180,10 +198,12 @@ export function checkAnswerScope(
     withinTarget: exceedsTarget.length === 0 && !unknownTextPresent,
     unknownTextPresent,
     note: unknownTextPresent
-      ? "既知概念を検出できなかったため、安全側に倒して未判定です。全量データ化後に精度が上がります。"
+      ? "既知概念を検出できなかったため、安全側に倒して未判定です。"
       : exceedsTarget.length > 0
         ? "対象学年より後で扱う概念を検出しました。"
-        : "seedデータで検出した範囲では対象学年内です。未登録概念まで保証するものではありません。",
+        : datasetStatus.mode === "mext+seed"
+          ? "文科省コード表＋seedで検出した範囲では対象学年内です。自由記述の完全な意味理解を保証するものではありません。"
+          : "seedデータで検出した範囲では対象学年内です。npm run import:mext で全量データ化できます。",
   };
 }
 
@@ -215,6 +235,15 @@ function buildPrerequisiteNode(
   };
 }
 
+function findSeedPrerequisiteProxy(query: string, official: CurriculumItem): CurriculumItem | null {
+  const ranked = curriculumItems
+    .filter((item) => item.dataOrigin === "seed" && item.stage === official.stage)
+    .map((item) => scoreItem(query, item))
+    .filter((entry) => entry.score > 0)
+    .sort(compareScored);
+  return ranked[0]?.item ?? null;
+}
+
 export function getPrerequisites(
   topic: string,
   depth = 2,
@@ -222,10 +251,15 @@ export function getPrerequisites(
   const classification = classifyKnowledgeScope(topic, 1);
   if (!classification.bestMatch) return { matched: null, tree: null };
 
+  const root =
+    classification.bestMatch.prerequisites.length > 0
+      ? classification.bestMatch
+      : findSeedPrerequisiteProxy(topic, classification.bestMatch) ?? classification.bestMatch;
+
   return {
     matched: classification.bestMatch,
     tree: buildPrerequisiteNode(
-      classification.bestMatch,
+      root,
       Math.max(0, Math.min(depth, 5)),
       new Set(),
     ),
@@ -237,4 +271,8 @@ export function listTargets(): Array<{ target: TargetScope; rank: number }> {
     target: target as TargetScope,
     rank,
   }));
+}
+
+export function getDatasetStatus() {
+  return datasetStatus;
 }
