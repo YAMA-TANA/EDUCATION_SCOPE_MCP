@@ -31,7 +31,11 @@ test("flags concepts above a target grade", () => {
 
 test("accepts a detected concept inside target grade", () => {
   const result = checkAnswerScope("一次関数の傾きを求めます。", "中2");
-  assert.equal(result.withinTarget, true);
+  assert.equal(
+    result.withinTarget,
+    true,
+    `Unexpected audit result: ${JSON.stringify(result, null, 2)}`,
+  );
   assert.equal(result.exceedsTarget.length, 0);
 });
 
