@@ -1,6 +1,6 @@
 {
   "name": "education-scope-mcp",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "description": "MCP server for checking whether knowledge, explanations, and answers stay within Japanese school curriculum scope.",
@@ -17,7 +17,7 @@
     "start:http": "node dist/src/http.js",
     "dev": "tsx src/index.ts",
     "dev:http": "tsx src/http.ts",
-    "import:mext": "node scripts/import-mext.mjs",
+    "import:mext": "tsx scripts/import-mext.ts",
     "test": "npm run build && node --test dist/tests/*.test.js"
   },
   "dependencies": {
