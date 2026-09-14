@@ -2,7 +2,7 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.YAMA-TANA/education-scope-mcp",
   "title": "Education Scope MCP",
-  "description": "Classify Japanese school curriculum scope, audit explanations against grade limits, and search 16,887 normalized MEXT curriculum-code entries.",
+  "description": "Classify Japanese curriculum scope, audit grade limits, and search normalized MEXT data.",
   "websiteUrl": "https://github.com/YAMA-TANA/EDUCATION_SCOPE_MCP",
   "repository": {
     "url": "https://github.com/YAMA-TANA/EDUCATION_SCOPE_MCP",
