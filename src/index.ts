@@ -7,7 +7,7 @@ async function main() {
   const server = createEducationScopeServer();
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error("education-scope-mcp 0.1.0 running on stdio");
+  console.error("education-scope-mcp 0.2.0 running on stdio");
 }
 
 main().catch((error) => {
