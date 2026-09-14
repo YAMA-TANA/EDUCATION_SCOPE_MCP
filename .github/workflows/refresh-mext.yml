@@ -6,6 +6,11 @@ on:
     branches: [main]
     paths:
       - .github/workflows/refresh-mext.yml
+      - scripts/import-mext.ts
+      - src/mext.ts
+      - src/store.ts
+      - src/engine.ts
+      - src/types.ts
 
 permissions:
   contents: write
