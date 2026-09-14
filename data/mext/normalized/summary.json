@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-09-14T08:50:45.964Z",
+  "itemCount": 16887,
+  "sources": [
+    {
+      "stage": "小学校",
+      "codeTable": "82V12",
+      "sourceUrl": "https://www.mext.go.jp/content/20230901-mxt_syoto01-000010374_27.csv",
+      "rawRowCount": 3747,
+      "normalizedItemCount": 3747
+    },
+    {
+      "stage": "中学校",
+      "codeTable": "83V11",
+      "sourceUrl": "https://www.mext.go.jp/content/20230901-mxt_syoto01-000010374_09.csv",
+      "rawRowCount": 2190,
+      "normalizedItemCount": 2190
+    },
+    {
+      "stage": "高等学校",
+      "codeTable": "84V10",
+      "sourceUrl": "https://www.mext.go.jp/content/20230901-mxt_syoto01-000010374_01.csv",
+      "rawRowCount": 10950,
+      "normalizedItemCount": 10950
+    }
+  ]
+}
