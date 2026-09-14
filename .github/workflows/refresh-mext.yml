@@ -1,0 +1,58 @@
+name: Refresh MEXT curriculum
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/refresh-mext.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: refresh-mext-curriculum
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install
+      - name: Download and normalize official MEXT code tables
+        run: npm run import:mext
+      - name: Validate full-data build and tests
+        run: npm test
+      - name: Verify normalized dataset is non-trivial
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const file = 'data/mext/normalized/curriculum-items.json';
+          const data = JSON.parse(fs.readFileSync(file, 'utf8'));
+          if (!Array.isArray(data.items) || data.items.length < 1000) {
+            throw new Error(`Expected at least 1000 normalized rows, got ${data.items?.length ?? 0}`);
+          }
+          for (const table of ['82V12', '83V11', '84V10']) {
+            if (!data.sources.some((source) => source.codeTable === table && source.normalizedItemCount > 0)) {
+              throw new Error(`Missing normalized source ${table}`);
+            }
+          }
+          console.log(`Validated ${data.items.length} normalized curriculum rows`);
+          NODE
+      - name: Commit normalized curriculum data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/mext/normalized/curriculum-items.json data/mext/normalized/summary.json
+          if git diff --cached --quiet; then
+            echo "No normalized-data changes"
+          else
+            git commit -m "Refresh normalized MEXT curriculum data"
+            git push
+          fi
