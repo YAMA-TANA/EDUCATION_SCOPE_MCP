@@ -3,8 +3,24 @@
   "version": "0.2.0",
   "private": true,
   "type": "module",
-  "description": "MCP server for checking whether knowledge, explanations, and answers stay within Japanese school curriculum scope.",
+  "description": "Classify Japanese school curriculum scope, audit explanations against grade limits, and search normalized MEXT curriculum-code data.",
   "license": "MIT",
+  "mcpName": "io.github.YAMA-TANA/education-scope-mcp",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/YAMA-TANA/EDUCATION_SCOPE_MCP.git"
+  },
+  "homepage": "https://github.com/YAMA-TANA/EDUCATION_SCOPE_MCP#readme",
+  "keywords": [
+    "mcp",
+    "education",
+    "curriculum",
+    "mext",
+    "japan",
+    "school",
+    "learning-scope",
+    "model-context-protocol"
+  ],
   "engines": {
     "node": ">=20"
   },
