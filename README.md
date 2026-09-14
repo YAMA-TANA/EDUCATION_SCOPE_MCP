@@ -2,13 +2,16 @@
 
 日本の学校教育で、ある知識・用語・解法が**どの学校段階・学年・教科の範囲か**を判定し、LLMの説明が指定学年を超えていないか監査するMCPサーバーです。
 
-## できること
+文部科学省の学習指導要領コード表（小学校 `82V12` / 中学校 `83V11` / 高等学校 `84V10`）を取得・正規化して検索でき、手作業seedは自然な別名と前提知識グラフの補助データとして併用します。
+
+## MCP tools
 
 - `classify_knowledge_scope` — 「三平方の定理」「微分」「現在完了」などの教育範囲を判定
 - `check_answer_scope` — 「中2までで説明して」に高校・中3範囲が混ざっていないか監査
-- `search_curriculum` — 学校段階・教科・領域・キーワードで検索
+- `search_curriculum` — 学校段階・教科・領域・キーワードで公式コード表を検索
 - `get_prerequisites` — そのトピックを理解するための前提知識を取得
 - `list_supported_scopes` — 監査に指定できる上限学年を取得
+- `get_dataset_status` — 全量MEXTデータがロード済みか、コード表別件数とともに確認
 
 ## 例
 
@@ -20,7 +23,6 @@
     "stage": "中学校",
     "grade": 3,
     "subject": "数学",
-    "domain": "図形",
     "topic": "三平方の定理"
   }
 }
@@ -82,22 +84,13 @@ PORT=3000 npm run start:http
 
 HTTP実装はMCP TypeScript SDK v2の `createMcpHandler` を使用しています。
 
-## 文科省データ
-
-根拠データは文部科学省「教育データ標準」の学習指導要領コードを想定しています。
-
-- 教育データ標準: https://www.mext.go.jp/a_menu/other/data_00001.htm
-- 小学校: `82V12`
-- 中学校: `83V11`
-- 高等学校: `84V10`
-
-公式CSVを取得して、そのままJSON化するimporterを同梱しています。
+## 文科省データを全量取り込む
 
 ```bash
 npm run import:mext
 ```
 
-生成先:
+このコマンドは3つの公式CSVを取得し、raw保存だけでなく**MCPが直接読める正規化済みデータ**まで生成します。
 
 ```text
 data/mext/raw/
@@ -105,41 +98,60 @@ data/mext/raw/
   junior-high-83V11.json
   high-school-84V10.json
   index.json
+
+data/mext/normalized/
+  curriculum-items.json
+  summary.json
 ```
 
-現在の `src/data.ts` は、MCPをすぐ動かすための**seed正規化データ**です。正式な学習指導要領コードを推測で埋めず、`curriculumCode` は全量正規化が完了するまで未設定にしています。
+`curriculum-items.json` が存在すれば、MCP起動時に自動で読み込みます。存在しない環境でもseed-onlyモードで起動できます。現在どちらのモードかは `get_dataset_status` で確認できます。
 
-## 判定設計
-
-教育範囲判定では、単純な学校段階だけでなく次を保持します。
+公式コード表から保持する主な情報:
 
 ```ts
 {
   stage,
   grade,
+  grades,
   subject,
+  course,
   domain,
   topic,
   aliases,
-  prerequisites,
   curriculumCode,
+  codeTable,
+  itemNumber,
+  sectionPath,
   source
 }
 ```
 
+学年は16桁の学習指導要領コードの学年・段階欄を解釈します。複数学年にまたがるコードは `grades` に全学年を保持し、学年上限監査では安全側に倒すため、その範囲の上端を `grade` として使用します。高等学校は学年を推測して付与しません。
+
+## 自動更新
+
+`.github/workflows/refresh-mext.yml` は文科省CSVを取得し、正規化・テスト・件数検証を通過した場合だけ `data/mext/normalized/` をmainへコミットします。GitHub Actionsの **Refresh MEXT curriculum** から手動再実行できます。
+
+raw CSV由来JSONはGit管理対象外で、MCPが必要とする正規化済みJSONだけをリポジトリに保持します。
+
+## 判定設計
+
+公式コード表は「何を扱うか」の一次根拠として優先し、`src/data.ts` のseedは次の補助用途に残しています。
+
+- 「三平方」「ピタゴラスの定理」のような自然なalias
+- 概念間の前提知識グラフ
+- 公式データをまだ生成していない環境のフォールバック
+
 `check_answer_scope` は未登録概念を自動的に「範囲内」とは判定しません。既知概念を1件も検出できない文章は `unknownTextPresent: true` として安全側に倒します。
 
-## 現在のseed範囲
+## データソース
 
-v0.1では主に以下を入れています。
+文部科学省「教育データ標準」学習指導要領コード表:
 
-- 小1〜小6 算数の主要概念
-- 中1〜中3 数学の主要概念
-- 高校 数学I / II / B / C の主要概念
-- 中学英語: 現在完了、関係代名詞
-- 中学国語: 古文・漢文の基礎
-
-次の大きな作業は、文科省CSVから**全教科・全項目を正規化した検索インデックスを生成すること**です。
+- https://www.mext.go.jp/a_menu/other/data_00001.htm
+- 小学校 `82V12`
+- 中学校 `83V11`
+- 高等学校 `84V10`
 
 ## License
 
