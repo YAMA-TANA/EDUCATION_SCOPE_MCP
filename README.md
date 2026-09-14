@@ -4,6 +4,20 @@
 
 文部科学省の学習指導要領コード表（小学校 `82V12` / 中学校 `83V11` / 高等学校 `84V10`）を取得・正規化して検索でき、手作業seedは自然な別名と前提知識グラフの補助データとして併用します。
 
+## MCP Registry
+
+- Registry name: `io.github.YAMA-TANA/education-scope-mcp`
+- Display name: **Education Scope MCP**
+- Version: `0.2.0`
+- OCI image: `ghcr.io/yama-tana/education-scope-mcp:0.2.0`
+- Transport: `stdio`
+
+Registry description:
+
+> Classify Japanese school curriculum scope, audit explanations against grade limits, and search 16,887 normalized MEXT curriculum-code entries.
+
+`server.json` はOfficial MCP Registry向けのmanifestです。`.github/workflows/publish-mcp.yml` がOCIイメージをGHCRへ公開し、GitHub Actions OIDCでRegistryへ送信します。追加のRegistry用シークレットは不要です。
+
 ## MCP tools
 
 - `classify_knowledge_scope` — 「三平方の定理」「微分」「現在完了」などの教育範囲を判定
@@ -72,6 +86,12 @@ MCPクライアント設定例:
 }
 ```
 
+### Docker / OCI
+
+```bash
+docker run --rm -i ghcr.io/yama-tana/education-scope-mcp:0.2.0
+```
+
 ### Remote HTTP MCP
 
 ```bash
@@ -130,7 +150,7 @@ data/mext/normalized/
 
 ## 自動更新
 
-`.github/workflows/refresh-mext.yml` は文科省CSVを取得し、正規化・テスト・件数検証を通過した場合だけ `data/mext/normalized/` をmainへコミットします。GitHub Actionsの **Refresh MEXT curriculum** から手動再実行できます。
+`.github/workflows/refresh-mext.yml` は文科省CSVを取得し、正規化・テスト・件数検証を通過した場合だけ `data/mext/normalized/` をmainへコミットします。毎月1日の定期更新と手動実行に対応しています。
 
 raw CSV由来JSONはGit管理対象外で、MCPが必要とする正規化済みJSONだけをリポジトリに保持します。
 
