@@ -27,6 +27,24 @@ jobs:
       - run: npm install
       - name: Download and normalize official MEXT code tables
         run: npm run import:mext
+      - name: Diagnose source shape when normalization is empty
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const normalized = JSON.parse(fs.readFileSync('data/mext/normalized/curriculum-items.json', 'utf8'));
+          if (normalized.items.length === 0) {
+            for (const file of [
+              'data/mext/raw/elementary-82V12.json',
+              'data/mext/raw/junior-high-83V11.json',
+              'data/mext/raw/high-school-84V10.json',
+            ]) {
+              const raw = JSON.parse(fs.readFileSync(file, 'utf8'));
+              console.log(`SOURCE_SHAPE ${file}`);
+              console.log('HEADERS', JSON.stringify(raw.headers));
+              console.log('FIRST_ROW', JSON.stringify(raw.rows[0]));
+            }
+          }
+          NODE
       - name: Validate full-data build and tests
         run: npm test
       - name: Verify normalized dataset is non-trivial
