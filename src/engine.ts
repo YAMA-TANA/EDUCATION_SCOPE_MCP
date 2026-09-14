@@ -184,20 +184,65 @@ function semanticKey(item: CurriculumItem): string {
   return `${item.stage}|${item.grade ?? "*"}|${normalize(item.subject)}|${normalize(item.topic)}`;
 }
 
+interface DetectionMatch {
+  item: CurriculumItem;
+  term: string;
+  start: number;
+  end: number;
+}
+
+function findOccurrences(text: string, term: string): Array<{ start: number; end: number }> {
+  const occurrences: Array<{ start: number; end: number }> = [];
+  let from = 0;
+
+  while (from <= text.length - term.length) {
+    const start = text.indexOf(term, from);
+    if (start < 0) break;
+    occurrences.push({ start, end: start + term.length });
+    from = start + 1;
+  }
+
+  return occurrences;
+}
+
+/**
+ * Keep only the longest concept span at a given location. Without this,
+ * "一次関数" also matches the generic "関数" rows for grades 1, 2 and 3,
+ * which can falsely make an otherwise grade-2 explanation look out of scope.
+ */
+function maximalDetectionMatches(matches: DetectionMatch[]): DetectionMatch[] {
+  return matches.filter((candidate) =>
+    !matches.some(
+      (other) =>
+        other.term.length > candidate.term.length &&
+        other.start <= candidate.start &&
+        other.end >= candidate.end,
+    ),
+  );
+}
+
 function detectCurriculumItems(text: string): CurriculumItem[] {
   const normalizedText = normalize(text);
-  const found = new Map<string, CurriculumItem>();
+  const matches: DetectionMatch[] = [];
 
   for (const item of curriculumItems) {
+    const seenTerms = new Set<string>();
     for (const rawTerm of auditTermsFor(item)) {
       if (!meaningfulTerm(rawTerm)) continue;
       const term = normalize(rawTerm);
-      if (normalizedText.includes(term)) {
-        const key = semanticKey(item);
-        if (!found.has(key)) found.set(key, item);
-        break;
+      if (!term || seenTerms.has(term)) continue;
+      seenTerms.add(term);
+
+      for (const occurrence of findOccurrences(normalizedText, term)) {
+        matches.push({ item, term, ...occurrence });
       }
     }
+  }
+
+  const found = new Map<string, CurriculumItem>();
+  for (const match of maximalDetectionMatches(matches)) {
+    const key = semanticKey(match.item);
+    if (!found.has(key)) found.set(key, match.item);
   }
 
   return [...found.values()].sort((a, b) => scopeRank(a) - scopeRank(b));
