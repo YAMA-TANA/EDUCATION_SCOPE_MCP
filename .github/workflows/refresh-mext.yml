@@ -11,6 +11,8 @@ on:
       - src/store.ts
       - src/engine.ts
       - src/types.ts
+      - tests/engine.test.ts
+      - tests/mext.test.ts
 
 permissions:
   contents: write
