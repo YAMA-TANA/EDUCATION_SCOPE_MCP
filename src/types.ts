@@ -21,14 +21,25 @@ export interface CurriculumSource {
 export interface CurriculumItem {
   id: string;
   stage: SchoolStage;
+  /** Conservative upper end of the grade range used by scope auditing. */
   grade?: number;
+  /** All grades represented by the code when the curriculum item spans grades. */
+  grades?: number[];
   subject: string;
+  /** High-school course name when it can be inferred from the code-table hierarchy. */
+  course?: string;
   domain: string;
   topic: string;
   aliases: string[];
   description: string;
   prerequisites: string[];
   curriculumCode?: string;
+  codeTable?: string;
+  itemNumber?: string;
+  sectionPath?: string[];
+  /** Structural rows are retained for browsing but can be excluded from text scoring. */
+  searchable?: boolean;
+  dataOrigin?: "seed" | "mext";
   source: CurriculumSource;
 }
 
