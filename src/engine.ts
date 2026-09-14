@@ -44,6 +44,28 @@ function termsFor(item: CurriculumItem): string[] {
   return [item.topic, ...item.aliases];
 }
 
+/**
+ * Search benefits from inherited section-path aliases, but answer auditing must
+ * not treat every descendant of a section as an occurrence of the parent topic.
+ * For official rows, keep the direct topic plus aliases extracted from the row
+ * itself; drop aliases that merely repeat an ancestor in sectionPath.
+ */
+function auditTermsFor(item: CurriculumItem): string[] {
+  if (item.searchable === false) return [];
+  if (item.dataOrigin !== "mext") return termsFor(item);
+
+  const inherited = new Set(
+    (item.sectionPath ?? [])
+      .slice(0, -1)
+      .map((entry) => normalize(entry)),
+  );
+
+  return [
+    item.topic,
+    ...item.aliases.filter((alias) => !inherited.has(normalize(alias))),
+  ];
+}
+
 function meaningfulTerm(term: string): boolean {
   const normalized = normalize(term);
   if (/^[a-z0-9^+=]+$/i.test(normalized)) return normalized.length >= 3;
@@ -167,7 +189,7 @@ function detectCurriculumItems(text: string): CurriculumItem[] {
   const found = new Map<string, CurriculumItem>();
 
   for (const item of curriculumItems) {
-    for (const rawTerm of termsFor(item)) {
+    for (const rawTerm of auditTermsFor(item)) {
       if (!meaningfulTerm(rawTerm)) continue;
       const term = normalize(rawTerm);
       if (normalizedText.includes(term)) {
