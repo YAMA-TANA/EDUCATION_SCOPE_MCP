@@ -122,8 +122,8 @@ export function stripSectionMarker(value: string): string {
     /^[0-9]+\s*[.．、]\s*/,
     /^[（(]\s*[0-9一二三四五六七八九十]+\s*[）)]\s*/,
     /^[①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳]\s*/,
-    /^[ア-ン]\s*[.．、]\s*/,
-    /^[A-ZＡ-Ｚ]\s*[.．、]\s*/,
+    /^[ア-ン](?:\s+|[.．、]\s*)/,
+    /^[A-ZＡ-Ｚ](?:\s+|[.．、]\s*)/,
   ];
 
   let changed = true;
@@ -169,35 +169,35 @@ export function decodeGrades(
   return [];
 }
 
-function isFineParentCode(parent: string, child: string): boolean {
-  if (parent.length !== 16 || child.length !== 16) return false;
-  if (parent.slice(0, 7) !== child.slice(0, 7)) return false;
-
-  const parentFine = parent.slice(7, 15);
-  const childFine = child.slice(7, 15);
-  let ended = false;
-
-  for (let index = 0; index < parentFine.length; index += 1) {
-    const p = parentFine[index];
-    const c = childFine[index];
-    if (ended) {
-      if (p !== "0") return false;
-      continue;
-    }
-    if (p === c) continue;
-    if (p !== "0") return false;
-    ended = true;
-  }
-
-  return ended;
+function fineDepth(code: string): number {
+  return [...code.slice(7, 15)].filter((char) => char !== "0").length;
 }
 
-function hierarchyDepth(code: string): number {
-  let depth = 0;
-  for (const char of code.slice(7, 15)) {
-    if (char !== "0") depth += 1;
+/**
+ * Build possible structural parent codes by zeroing the fine-detail part from
+ * right to left. This avoids scanning all curriculum rows for every item.
+ */
+function parentCodesFor(code: string, codeToText: Map<string, string>): string[] {
+  if (code.length !== 16) return [];
+  const parents = new Set<string>();
+
+  for (let split = 14; split >= 7; split -= 1) {
+    if (code[split] === "0") continue;
+
+    const sameRevision = `${code.slice(0, split)}${"0".repeat(15 - split)}${code[15]}`;
+    if (sameRevision !== code && codeToText.has(sameRevision)) {
+      parents.add(sameRevision);
+    }
+
+    if (code[15] !== "0") {
+      const baseRevision = `${code.slice(0, split)}${"0".repeat(15 - split)}0`;
+      if (baseRevision !== code && codeToText.has(baseRevision)) {
+        parents.add(baseRevision);
+      }
+    }
   }
-  return depth;
+
+  return [...parents].sort((a, b) => fineDepth(a) - fineDepth(b));
 }
 
 function isUsefulText(text: string): boolean {
@@ -284,7 +284,6 @@ function deriveCourseNames(
 
 export function normalizeMextSource(dataset: RawMextDataset): CurriculumItem[] {
   const codeToText = new Map<string, string>();
-  const codeToRow = new Map<string, Record<string, unknown>>();
   const courseNames = deriveCourseNames(dataset.rows, dataset.stage);
 
   for (const row of dataset.rows) {
@@ -292,7 +291,6 @@ export function normalizeMextSource(dataset: RawMextDataset): CurriculumItem[] {
     const text = pick(row, ["学習指導要領テキスト", "テキスト"]);
     if (!code || !text) continue;
     codeToText.set(code, text);
-    codeToRow.set(code, row);
   }
 
   const items: CurriculumItem[] = [];
@@ -311,11 +309,10 @@ export function normalizeMextSource(dataset: RawMextDataset): CurriculumItem[] {
     const topic = stripSectionMarker(rawText);
     if (!topic) continue;
 
-    const parentCodes = [...codeToText.keys()]
-      .filter((candidate) => isFineParentCode(candidate, code))
-      .sort((a, b) => hierarchyDepth(a) - hierarchyDepth(b));
     const sectionPath = [
-      ...parentCodes.map((parent) => stripSectionMarker(codeToText.get(parent) ?? "")),
+      ...parentCodesFor(code, codeToText).map((parent) =>
+        stripSectionMarker(codeToText.get(parent) ?? ""),
+      ),
       topic,
     ].filter((value, pathIndex, all) => value && all.indexOf(value) === pathIndex);
 
