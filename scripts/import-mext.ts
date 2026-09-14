@@ -107,13 +107,35 @@ function normalizeHeaders(row: string[]): string[] {
   });
 }
 
+function findHeaderRowIndex(rows: string[][]): number {
+  const index = rows.findIndex((row) => {
+    const cells = row.map((cell) => cell.replace(/^\uFEFF/, "").trim());
+    return (
+      cells.includes("学習指導要領コード") &&
+      cells.includes("学習指導要領テキスト")
+    );
+  });
+
+  if (index < 0) {
+    throw new Error(
+      "Could not find MEXT CSV header row containing 学習指導要領コード and 学習指導要領テキスト",
+    );
+  }
+  return index;
+}
+
 function rowsToObjects(rows: string[][]): {
   headers: string[];
   rows: Array<Record<string, string>>;
 } {
   if (rows.length === 0) return { headers: [], rows: [] };
-  const headers = normalizeHeaders(rows[0]);
-  const objects = rows.slice(1).map((values) =>
+
+  // MEXT code-table CSVs put a human-readable title on the first row and the
+  // machine-readable column names on the following row. Find the real header
+  // by content instead of assuming row 1.
+  const headerIndex = findHeaderRowIndex(rows);
+  const headers = normalizeHeaders(rows[headerIndex]);
+  const objects = rows.slice(headerIndex + 1).map((values) =>
     Object.fromEntries(
       headers.map((header, index) => [header, values[index] ?? ""]),
     ),
