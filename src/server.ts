@@ -3,6 +3,7 @@ import * as z from "zod/v4";
 import {
   checkAnswerScope,
   classifyKnowledgeScope,
+  getDatasetStatus,
   getPrerequisites,
   listTargets,
   searchCurriculum,
@@ -22,14 +23,14 @@ function jsonResult(value: unknown) {
 export function createEducationScopeServer(): McpServer {
   const server = new McpServer({
     name: "education-scope-mcp",
-    version: "0.1.0",
+    version: "0.2.0",
   });
 
   server.registerTool(
     "classify_knowledge_scope",
     {
       description:
-        "日本の学校教育において、指定した知識・用語・解法が主にどの学校段階・学年・教科で扱われるかを判定します。例: 三平方の定理、二次方程式、現在完了、微分。",
+        "日本の学校教育において、指定した知識・用語・解法が主にどの学校段階・学年・教科で扱われるかを判定します。文部科学省の正規化済み学習指導要領コード表が利用可能な場合はそれを優先します。",
       inputSchema: z.object({
         query: z
           .string()
@@ -77,7 +78,7 @@ export function createEducationScopeServer(): McpServer {
     "search_curriculum",
     {
       description:
-        "教育範囲データから、教科・学校段階・領域・キーワードで項目を検索します。",
+        "教育範囲データから、教科・学校段階・領域・キーワードで項目を検索します。公式データでは学習指導要領コードも結果に含まれます。",
       inputSchema: z.object({
         query: z.string().optional().describe("検索語。省略時はフィルタのみ"),
         stage: z
@@ -97,7 +98,7 @@ export function createEducationScopeServer(): McpServer {
     "get_prerequisites",
     {
       description:
-        "指定したトピックを理解するための前提知識を、教育範囲データ上の依存関係として返します。",
+        "指定したトピックを理解するための前提知識を返します。公式コード表に概念依存関係がない場合は、同梱seedの前提知識グラフを補助的に使用します。",
       inputSchema: z.object({
         topic: z.string().min(1).describe("対象トピック"),
         depth: z
@@ -119,6 +120,16 @@ export function createEducationScopeServer(): McpServer {
       inputSchema: z.object({}),
     },
     async () => jsonResult(listTargets()),
+  );
+
+  server.registerTool(
+    "get_dataset_status",
+    {
+      description:
+        "文部科学省の正規化済み全量データがロードされているか、コード表ごとの件数とともに返します。",
+      inputSchema: z.object({}),
+    },
+    async () => jsonResult(getDatasetStatus()),
   );
 
   return server;
